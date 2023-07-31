@@ -11,6 +11,7 @@ const formMinutes = document.querySelector('[data-minutes]');
 const formSeconds = document.querySelector('[data-seconds]');
 
 let difference;
+let timerId;
 const DELAY = 1000;
 
 const options = {
@@ -18,17 +19,19 @@ const options = {
   minuteIncrement: 1,
   time_24hr: true,
   enableTime: true,
-  onClose(selectedDates) {
-    const differenceTime = selectedDates[0] - new Date();
+  onClose([selectedDate]) {
+    const differenceTime = selectedDate - Date.now();
     const isInFuture = differenceTime > 0;
 
-    startButton.disabled = isInFuture ? false : true;
+    startButton.disabled = !isInFuture;
 
     if (!isInFuture) {
       Notify.failure('Please, choose a date in the future!');
     }
   },
 };
+
+
 
 startButton.disabled = true;
 resetButton.disabled = true;
@@ -39,37 +42,44 @@ startButton.addEventListener('click', onStartButtonClick);
 resetButton.addEventListener('click', onResetButtonClick);
 
 function onResetButtonClick() {
-  formDays.textContent = '00';
-  formHours.textContent = '00';
-  formMinutes.textContent = '00';
-  formSeconds.textContent = '00';
+  setCountdown({})
 
   resetButton.disabled = true;
   input.disabled = false;
 }
 
-function onStartButtonClick() {
-  resetButton.disabled = false;
-  startButton.disabled = true;
-  input.disabled = true;
-  setTimer();
-  const timerId = setInterval(() => {
-    setTimer();
-    resetButton.addEventListener('click', () => clearInterval(timerId));
-    if (difference < DELAY) {
-      input.disabled = false;
-      clearInterval(timerId);
-    }
-  }, DELAY);
-}
-
-function setTimer() {
-  const { days, hours, minutes, seconds } = transformMs(getDifferenceTime());
-
+function setCountdown({days = 0, hours = 0, minutes = 0, seconds = 0}) {
   formDays.textContent = addLeadingZero(days);
   formHours.textContent = addLeadingZero(hours);
   formMinutes.textContent = addLeadingZero(minutes);
   formSeconds.textContent = addLeadingZero(seconds);
+}
+
+function onStartButtonClick() {
+  setStart(true);
+  input.disabled = true;
+  setTimer();
+  timerId = setInterval(() => {
+    setTimer();
+    
+    if (difference < DELAY) {
+      input.disabled = false;
+      clearInterval(timerId);
+      resetButton.disabled = true;
+    }
+  }, DELAY);
+}
+
+resetButton.addEventListener('click', () => clearInterval(timerId));
+
+const setStart = (boolean) => {
+  startButton.disabled = boolean;
+  resetButton.disabled = !boolean;
+}
+
+function setTimer() {
+  difference = getDifferenceTime();
+  setCountdown(transformMs(getDifferenceTime()));
 }
 
 function transformMs(ms) {
@@ -86,7 +96,7 @@ function transformMs(ms) {
 
 function getDifferenceTime() {
   const chosenDatetime = new Date(input.value);
-  const currentTime = new Date();
+  const currentTime = Date.now();
   return chosenDatetime - currentTime;
 }
 
